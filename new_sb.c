@@ -136,7 +136,14 @@ void start_socket()
 		            else
 		            {
 				    toggle = strtok(NULL, s);
-				    switch_num = atoi(toggle);
+				    if(toggle[0] >='0' && toggle[0] <='9')
+				    {
+				    	switch_num = atoi(toggle);
+				    }
+				    else
+				    {
+				    	switch_num = -1;
+				    }
 		            }
 		    
 		    }
@@ -213,7 +220,16 @@ void start_socket()
 		            }
 		            
 		            toggle = strtok(NULL, s);
-		            action = atoi(toggle);
+		            
+		            if(toggle[0] >='0' && toggle[0] <='9')
+		            {
+		            	action = atoi(toggle);
+		            }
+		            else
+		            {
+		            	noAction =1;
+		            }
+		            
 		    
 		    }
 		    else
