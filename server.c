@@ -1,4 +1,5 @@
-//gcc server.c -o server -lpthread
+//gcc server.c -o server -lpthread  -- for pc
+//arm-linux-gnueabi-gcc server.c -o server -lpthread -w   -- for chip
 
 //General header files
 #include<sys/types.h>
@@ -18,6 +19,7 @@ struct node *next;
 }n;
 // General macros
 #define MAX 4096
+#define MAX_CMD 20
 #define MAXCONN 1000
 
 // Global variables
@@ -30,8 +32,6 @@ long int count_gen = 0;
 long int count_sb = 0;
 static int isGenRunning=0;
 static int isRunning=0;
-char quit_code[30] = "THREAD_QUIT";
-char global_message[1096] = "kalrav";
 pthread_mutex_t lock;
 pthread_t threads,threada;
 fd_set readfds;
@@ -44,11 +44,10 @@ void exit_function(char message[MAX])
 
 
 // Broadcast msg for our switchboard. Strictly 11 chars only.
-void broadcast_Message_For_SB(char message[MAX],int *csdd)
+void broadcast_Message_For_SB(char message[],int *csdd)
 {
 	int i;
-	char messsage[4096];
-	char reply[4096];
+	char reply[20];
 
 	struct data *tempp;
 	tempp=root;
@@ -59,7 +58,7 @@ void broadcast_Message_For_SB(char message[MAX],int *csdd)
 			{
 				printf("got it \n");
 				send(tempp->csd,message, strlen(message)+1, MSG_NOSIGNAL);
-				recv(tempp->csd,reply,4095,0);
+				recv(tempp->csd,reply,20,0);
 				write(*csdd,reply,strlen(reply)+1);
 				printf("transaction over \n");
 				break;
@@ -81,10 +80,10 @@ void *start_listen_To_all( void *param)
 {
 	int *csdd = (int*)param;
 	int i = 0;
-	char message[MAX];
+	char message[MAX_CMD];
 	
 	while(1){
-		if( read(*csdd,message,4096) > 0 )
+		if( read(*csdd,message,20) > 0 )
 		{
 			printf("Recevied command %s\n",message);
 			if(strcmp(message,"SWITCHBOARD")==0)
@@ -92,7 +91,7 @@ void *start_listen_To_all( void *param)
 			
 				printf("Seems switchboard \n");
 				write(*csdd,"ACKNOWLEDGE",12);
-				read(*csdd,message,4096);
+				read(*csdd,message,13);
 				write(*csdd,"ACKNOWLEDGE",12);
 				
 				struct data *temp;
@@ -180,14 +179,12 @@ int main(void)
 	}
 
 	int on = 1;
-	int pipe = 1;
 	int ret = setsockopt( socket_write, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on) );
-	int ret2 = setsockopt( socket_write, SOL_SOCKET, SO_NOSIGPIPE, &pipe, sizeof(pipe) );
 
 	/* bind address to socket */
 	saddress.sin_family = AF_INET;
 	saddress.sin_port = htons(5000);
-	saddress.sin_addr.s_addr = inet_addr("192.168.0.1");
+	saddress.sin_addr.s_addr = inet_addr("127.0.0.1");
 
 	if( bind( socket_write, (struct sockaddr*)&saddress, sizeof(saddress)) == -1)
 	{

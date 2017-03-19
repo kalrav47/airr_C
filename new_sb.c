@@ -17,14 +17,18 @@
 #define ID_FILE "id"
 #define STAT_FILE "stat.txt"
 #define USAGE_FILE "usage.txt"
-#define IP "192.168.0.1"
+#define IP "127.0.0.1"
 //#define IP "192.168.1.105"
 #define MY_TYPE "SWITCHBOARD"
 #define ACKNOWLEDGE "ACKNOWLEDGE"
 //#define ACKNOWLEDGE "************"
+#define NOACTIONASKED "NOACTIONASKED"
+#define INVALIDACTION "INVALIDACTION"
+#define TURNEDON "TURNEDON"
+#define TURNEDOFF "TURNEDOFF"
 #define RECVFAILEDD "RECVFAILEDD"
 #define STATUS "STATUS"
-#define NOSWITCH "NOSWITCH"
+#define NOSUCHSWITCH "NOSUCHSWITCH"
 #define NOPROPERVAL "NOPROPERVAL"
 #define ARM "ARM"
 #define DISARM "DISARM"
@@ -43,12 +47,16 @@ static bool isArmed = false;
 
 void start_socket()
 {
-    int id,sockfd = 0,length,switch_num;
-    char recvBuff[4096],data[25],id_string[11],cmd[50];
+    int id,sockfd = 0,length,switch_num,cmdLen;
+    char recvBuff[20],data[25],id_string[11],cmd[10];
     struct sockaddr_in serv_addr;
+    const char s[2] = "-";
+    char *toggle;
+    int noAction = 0;
     
     char cutstart;
     int cutend;
+    int action = 2;
 
     FILE *file = fopen(ID_FILE, "r");
     fscanf(file, "%d", &id);
@@ -80,15 +88,15 @@ void start_socket()
     }
 
     write(sockfd, MY_TYPE, 12);
-    read(sockfd, recvBuff, 50);
+    read(sockfd, recvBuff, 13);
     write(sockfd, id_string, 12);
-    read(sockfd, recvBuff, 50);
+    read(sockfd, recvBuff, 13);
     printf("sent id %s\n",id_string);
     while (1)
     {
         strcpy(recvBuff, "");
         strcpy(data,"");
-        read(sockfd, recvBuff, 50);
+        read(sockfd, recvBuff, 20);
 	printf("got command\n");
         length = strlen(recvBuff);
         //cmd = recvBuff+10;
@@ -102,11 +110,12 @@ void start_socket()
 	cmd[cutend]=0;
 	strcpy(recvBuff+cutstart,recvBuff+cutstart+cutend);
         
+        printf("Received - command = %s\n",cmd);
         if (strcmp(recvBuff, "") != 0 && strstr(recvBuff, id_string) != NULL)
         {
             if (strcmp(cmd,STATUS) == 0)
             {
-                sprintf(data, "%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d",id,flag[0], flag[1], flag[2], flag[3], flag[4], flag[5], flag[6], flag[7], flag[8],flag[9], flag[10], flag[11], flag[12], flag[13], flag[14]);
+                sprintf(data, "%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d",flag[0], flag[1], flag[2], flag[3], flag[4], flag[5], flag[6], flag[7], flag[8],flag[9], flag[10], flag[11], flag[12], flag[13], flag[14]);
                 write(sockfd, data, strlen(data) + 1);
                 printf("replied\n");
             }
@@ -142,23 +151,47 @@ void start_socket()
                 if(!isArmed)
                 {
                     pthread_mutex_lock(&lock);
-                    switch_num = atoi(cmd);
-
-                    if(switch_num >=15)
+		    cmdLen = strlen(cmd);
+		    if(strstr(cmd,s) != NULL && cmd[cmdLen-1] != '-')
+		    {
+		            toggle = strtok(cmd, s);
+		            switch_num = atoi(toggle);
+		            
+		            toggle = strtok(NULL, s);
+		            action = atoi(toggle);
+		    
+		    }
+		    else
+		    {
+		    	noAction =1;
+		    }
+		    
+                    if(noAction==1)
                     {
-                        write(sockfd, NOSWITCH, 12);
+                    	write(sockfd, NOACTIONASKED, 14);
+                    	noAction=0;
+                    }                   
+                    else if(switch_num >=15 || strcmp(cmd,"")==0)
+                    {
+                        write(sockfd, NOSUCHSWITCH, 13);
                     }             
-                    else if (flag[switch_num] == 1)
+                    else if(action != 1 && action != 0)
                     {
-                        write(sockfd, ACKNOWLEDGE, 12);
-                        gpio_write(switch_num,0);
-
+                        write(sockfd, INVALIDACTION, 14);
                     }
-                    else if(flag[switch_num] == 0)
+                    else if (action == 1 || action == 0 )
                     {
+                        gpio_write(switch_num,action);
+                        
+                        if(action == 1)
+                        {
+                        	write(sockfd, TURNEDON, 9);
+                        }	
+                        else
+                        {
+                        	write(sockfd, TURNEDOFF, 10);
+                        }
 
-                        gpio_write(switch_num,1);
-                        write(sockfd, ACKNOWLEDGE, 12);
                     }
                     else
                     {
