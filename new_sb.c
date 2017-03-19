@@ -38,6 +38,7 @@
 #define ARM_FILE ".AMRED"
 #define ARM_CMD "touch .AMRED"
 #define DISARM_CMD "rm .AMRED"
+#define USAGE "USAGE"
 
 pthread_mutex_t lock;
 int flag[15] = { 0, };
@@ -53,6 +54,8 @@ void start_socket()
     const char s[2] = "-";
     char *toggle;
     int noAction = 0;
+    int us[15]={ 0, };
+    FILE *f_usage;
     
     char cutstart;
     int cutend;
@@ -119,6 +122,50 @@ void start_socket()
                 write(sockfd, data, strlen(data) + 1);
                 printf("replied\n");
             }
+            else if(strstr(cmd,USAGE) != NULL)
+            {
+            	cmdLen = strlen(cmd);
+            	    if(strstr(cmd,s) != NULL && cmd[cmdLen-1] != '-')
+		    {
+		            toggle = strtok(cmd, s);
+		            
+		            if(strcmp(toggle,USAGE)!=0)
+		            {
+		            	switch_num = -1;
+		            }
+		            else
+		            {
+				    toggle = strtok(NULL, s);
+				    switch_num = atoi(toggle);
+		            }
+		    
+		    }
+		    else
+		    {
+		    	noAction =1;
+		    }
+		   
+		    if(noAction==1)
+                    {
+                    	write(sockfd, NOACTIONASKED, 14);
+                    	noAction=0;
+                    }                   
+                    else if(switch_num >=15 || strcmp(cmd,"")==0 || switch_num == -1)
+                    {
+                        write(sockfd, NOSUCHSWITCH, 13);
+                    }
+                    else
+                    {
+                    	f_usage = fopen(USAGE_FILE, "r");
+        		fscanf(f_usage, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", &us[0],&us[1], &us[2], &us[3], &us[4], &us[5], &us[6], &us[7], &us[8],&us[9],&us[10], &us[11], &us[12], &us[13], &us[14]);
+        		fclose(f_usage);
+        
+                    	sprintf(data,"%d",us[switch_num]);
+                    	
+                    	write(sockfd, data, 20);
+                    } 
+		    
+            }
             else if(strcmp(cmd,ARM) == 0)
             {
                 if(isArmed)
@@ -155,7 +202,15 @@ void start_socket()
 		    if(strstr(cmd,s) != NULL && cmd[cmdLen-1] != '-')
 		    {
 		            toggle = strtok(cmd, s);
-		            switch_num = atoi(toggle);
+		            
+		            if(toggle[0] >='0' && toggle[0] <='9')
+		            {
+		            	switch_num = atoi(toggle);
+		            }
+		            else
+		            {
+		            	switch_num = -1;
+		            }
 		            
 		            toggle = strtok(NULL, s);
 		            action = atoi(toggle);
@@ -183,7 +238,12 @@ void start_socket()
                     {
                         gpio_write(switch_num,action);
                         
-                        if(action == 1)
+                        printf("swtch num, = %d\n",switch_num);
+                        if(switch_num == -1)
+                        {
+                        	write(sockfd, NOSUCHSWITCH, 13);
+                        }
+                        else if(action == 1)
                         {
                         	write(sockfd, TURNEDON, 9);
                         }	
