@@ -1,5 +1,5 @@
 //gcc server.c -o server -lpthread  -- for pc
-//arm-linux-gnueabi-gcc server.c -o server -lpthread -w   -- for chip
+//~/CHIP-SDK/CHIP-buildroot/output/host/usr/bin/arm-linux-gnueabihf-gcc server.c -o server -lpthread -w   -- for chip
 
 //General header files
 #include<sys/types.h>
@@ -51,14 +51,16 @@ void broadcast_Message_For_SB(char message[],int *csdd)
 
 	struct data *tempp;
 	tempp=root;
-			printf("start searching our desired board \n");	
+			//printf("start searching our desired board \n");	
 		while(tempp  != NULL)
 		{
 			if(strstr(message,tempp->id)!= NULL)
 			{
-				printf("got it \n");
-				send(tempp->csd,message, strlen(message)+1, MSG_NOSIGNAL);
-				recv(tempp->csd,reply,20,0);
+				printf("v1 got it \n");
+				write(tempp->csd,message, strlen(message)+1);
+				printf("sent it\n");
+				read(tempp->csd,reply,20);
+				printf("received reply %s\n",reply);
 				write(*csdd,reply,strlen(reply)+1);
 				printf("transaction over \n");
 				break;
@@ -72,7 +74,7 @@ void broadcast_Message_For_SB(char message[],int *csdd)
 		{
 			write(*csdd,"NOSWITCHBOARD",14);
 		}
-printf("cmd compelted successfully \n");
+//printf("cmd compelted successfully \n");
 }
 
 
@@ -85,11 +87,11 @@ void *start_listen_To_all( void *param)
 	while(1){
 		if( read(*csdd,message,20) > 0 )
 		{
-			printf("Recevied command %s\n",message);
+			//printf("Recevied command %s\n",message);
 			if(strcmp(message,"SWITCHBOARD")==0)
 			{
 			
-				printf("Seems switchboard \n");
+				//printf("Seems switchboard \n");
 				write(*csdd,"ACKNOWLEDGE",12);
 				read(*csdd,message,13);
 				write(*csdd,"ACKNOWLEDGE",12);
@@ -134,7 +136,7 @@ void *start_listen_To_all( void *param)
 					ptr->next=NULL;
 				}
 		}
-					printf("Done adding switchboard to database \n");		
+					//printf("Done adding switchboard to database \n");		
 				//pthread_create( &threada, NULL,start_listen_To_SB,(void *)csdd);
 				break;
 			}
@@ -146,13 +148,13 @@ void *start_listen_To_all( void *param)
 			}	
 			else
 			{
-				printf("locking mutex \n");
+				//printf("locking mutex \n");
 				pthread_mutex_lock( &lock);
-				printf("locked mutex and asking board\n");
+				//printf("locked mutex and asking board\n");
 				broadcast_Message_For_SB(message,csdd);
-				printf("done asking board... unlocking mutex \n");
+				//printf("done asking board... unlocking mutex \n");
 				pthread_mutex_unlock( &lock);
-				printf("unlocked mutex \n");
+				//printf("unlocked mutex \n");
 				close(*csdd);
 				break;
 			}
@@ -184,7 +186,7 @@ int main(void)
 	/* bind address to socket */
 	saddress.sin_family = AF_INET;
 	saddress.sin_port = htons(5000);
-	saddress.sin_addr.s_addr = inet_addr("127.0.0.1");
+	saddress.sin_addr.s_addr = inet_addr("192.168.0.1");
 
 	if( bind( socket_write, (struct sockaddr*)&saddress, sizeof(saddress)) == -1)
 	{
@@ -200,9 +202,9 @@ int main(void)
 	{
 		csd = accept( socket_write, (struct sockaddr*)NULL,NULL);
 		pthread_create( &threads, NULL,start_listen_To_all, (void*)&csd);
-		printf("Thread started ..\n");
+		//printf("Thread started ..\n");
 		pthread_join(threads,NULL);
-		printf("Thread finished.. \n");
+		//printf("Thread finished.. \n");
 	}	
 		pthread_exit(NULL);
 	

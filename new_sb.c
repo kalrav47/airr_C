@@ -1,3 +1,5 @@
+// ~/CHIP-SDK/CHIP-buildroot/output/host/usr/bin/arm-linux-gnueabihf-gcc client.c -o client -lpthread -w
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,8 +19,8 @@
 #define ID_FILE "id"
 #define STAT_FILE "stat.txt"
 #define USAGE_FILE "usage.txt"
-#define IP "127.0.0.1"
-//#define IP "192.168.1.105"
+//#define IP "127.0.0.1"
+#define IP "192.168.0.1"
 #define MY_TYPE "SWITCHBOARD"
 #define ACKNOWLEDGE "ACKNOWLEDGE"
 //#define ACKNOWLEDGE "************"
@@ -119,6 +121,7 @@ void start_socket()
             if (strcmp(cmd,STATUS) == 0)
             {
                 sprintf(data, "%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d",flag[0], flag[1], flag[2], flag[3], flag[4], flag[5], flag[6], flag[7], flag[8],flag[9], flag[10], flag[11], flag[12], flag[13], flag[14]);
+                data[strlen(data)]='\0';
                 write(sockfd, data, strlen(data) + 1);
                 printf("replied\n");
             }
@@ -367,7 +370,7 @@ void *gpio_read()
         for (j = 0; j < 15; j++)
         {
     	    char readfile[128]="";
-    	    /*sprintf(readfile,"/sys/class/gpio/gpio%d/value",gpio_pins_read[j]);
+    	   /* sprintf(readfile,"/sys/class/gpio/gpio%d/value",gpio_pins_read[j]);
             FILE *file = fopen(readfile,"r");
             fscanf(file,"%d",&i);
             if(i==1)
