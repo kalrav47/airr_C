@@ -34,14 +34,27 @@ void broadcastToSwitchBoardAndGetReply(char message[],int *csdd)
         // through the linked list that
         if(strstr(message,tempp->id)!= NULL)
         {
+#ifdef DEBUG
+	    printf("Writing '%s' to sb\n",message);
+#endif
             // Pass command to switch board
             write(tempp->csd,message, MAX_CMD);
 
+#ifdef DEBUG
+	    printf("Writing Done... waiting for reply\n");
+#endif
             // get reply from switchboard
             read(tempp->csd,reply,MAX_CMD);
 
+#ifdef DEBUG
+	    printf("Got reply '%s' from sb and writing back to bridge server\n",reply);
+#endif
             // write back to bridge server.
             write(*csdd,reply,MAX_CMD);
+
+#ifdef DEBUG
+	    printf("Sent reply to bridge server\n",reply);
+#endif
             break;
         }
         else
@@ -65,18 +78,27 @@ void *serveRequest( void *param)
     while(1) {
         if( read(*csdd,message,MAX_CMD) > 0 )
         {
+#ifdef DEBUG
+	    printf("Got message '%s' to server...\n",message);
+#endif
             if(strcmp(message,SWITCHBOARD)==0)
             {
                 // found that new switchboard is connected. We have found
                 // it so acknowledge it.
                 write(*csdd,ACKNOWLEDGE,MAX_CMD);
-
+#ifdef DEBUG
+	        printf("Ack sent !\n");
+#endif
                 // now sb will send its id so store it in linked list.
                 read(*csdd,message,MAX_CMD);
-
+#ifdef DEBUG
+	        printf("Got id of switchBoard '%s' to server...\n",message);
+#endif
                 // acknowledge that we have got id.
                 write(*csdd,ACKNOWLEDGE,MAX_CMD);
-
+#ifdef DEBUG
+	        printf("Ack sent again..!\n");
+#endif
                 // store that id in linked list so that we can communicate
                 // with it lator to pass command.
                 struct data *temp;

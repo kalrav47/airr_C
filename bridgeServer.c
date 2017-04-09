@@ -1,5 +1,5 @@
 // Compile for PC : gcc server.c -o server -lpthread
-// Compile for CHIP : ~/CHIP-SDK/CHIP-buildroot/output/host/usr/bin/arm-linux-gnueabihf-gcc server.c -o server -lpthread -w
+// Compile for CHIP : ~/CHIP-SDK/CHIP-buildroot/output/host/usr/bin/arm-linux-gnueabihf-gcc bridgeServer.c -o bridgeServer -lpthread -w
 
 // Header file
 #include "bridgeServer.h"

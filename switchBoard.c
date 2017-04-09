@@ -59,33 +59,51 @@ void startSocketAndServeCommands()
         printf("\n Error : Connect Failed \n");
         incaseOfSignal();
     }
-
+#ifdef DEBUG
+	    printf("Writing type to server\n");
+#endif
     // tell server that this is switchboard not the ordinary client
     // so that server will keep on listening
-    write(sockfd, MY_TYPE, 12);
-
+    write(sockfd, MY_TYPE, MAX_CMD);
+#ifdef DEBUG
+	    printf("Writing done\n");
+#endif
     // wait for acknowledge.
-    read(sockfd, recvBuff, 13);
+    read(sockfd, recvBuff, MAX_CMD);
 
+#ifdef DEBUG
+	    printf("Got ack.. '%s' from server\n",recvBuff);
+#endif
     // give server our id so that it can remeber us and gives us
     // command which is request to this switchboard.
-    write(sockfd, id_string, 12);
-
+    write(sockfd, id_string, MAX_CMD);
+#ifdef DEBUG
+	    printf("Writing id done\n");
+#endif
     // wait for acknowledge.
-    read(sockfd, recvBuff, 13);
-
+    read(sockfd, recvBuff, MAX_CMD);
+#ifdef DEBUG
+	    printf("Got ack.. '%s' from server\n",recvBuff);
+#endif
     while (1)
     {
 	// clear our buffers
         strcpy(recvBuff, "");
         strcpy(data,"");
 
+#ifdef DEBUG
+        printf("Waiting for command...\n");
+#endif
         // read command
-        read(sockfd, recvBuff, 20);
+        read(sockfd, recvBuff, MAX_CMD);
         length = strlen(recvBuff);
 
+#ifdef DEBUG
+        printf("Got command : %s\n",recvBuff);
+#endif
+
         // make sure command has our id in it and command is not an empty
-        if (strcmp(recvBuff, "") != 0 && strstr(recvBuff, id_string) != NULL && length<COMMAD_MIN_LENGTH)
+        if (strcmp(recvBuff, "") != 0 && strstr(recvBuff, id_string) != NULL)
         {
             // parse the command
             cutstart=10;
@@ -99,7 +117,7 @@ void startSocketAndServeCommands()
             {
                 sprintf(data, "%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d",flag[0], flag[1], flag[2], flag[3], flag[4], flag[5], flag[6], flag[7], flag[8],flag[9], flag[10], flag[11], flag[12], flag[13], flag[14]);
                 data[15]='\0';
-                write(sockfd, data,16);
+                write(sockfd, data,MAX_CMD);
             }
             else if(strstr(cmd,USAGE) != NULL)
             {
@@ -133,12 +151,12 @@ void startSocketAndServeCommands()
 
                 if(noAction==1)
                 {
-                    write(sockfd, NOACTIONASKED, 14);
+                    write(sockfd, NOACTIONASKED, MAX_CMD);
                     noAction=0;
                 }
                 else if(switch_num >=15 || strcmp(cmd,"")==0 || switch_num == -1)
                 {
-                    write(sockfd, NOSUCHSWITCH, 13);
+                    write(sockfd, NOSUCHSWITCH, MAX_CMD);
                 }
                 else
                 {
@@ -148,7 +166,7 @@ void startSocketAndServeCommands()
 
                     sprintf(data,"%d",us[switch_num]);
 
-                    write(sockfd, data, 20);
+                    write(sockfd, data, MAX_CMD);
                 }
 
             }
@@ -156,27 +174,27 @@ void startSocketAndServeCommands()
             {
                 if(isArmed)
                 {
-                    write(sockfd, ALREADYARM, 12);
+                    write(sockfd, ALREADYARM, MAX_CMD);
                 }
                 else
                 {
                     isArmed= true;
                     system(ARM_CMD);
 
-                    write(sockfd, ACKNOWLEDGE, 12);
+                    write(sockfd, ACKNOWLEDGE, MAX_CMD);
                 }
             }
             else if(strcmp(cmd,DISARM)==0)
             {
                 if(!isArmed)
                 {
-                    write(sockfd, ALREADYDISARM, 12);
+                    write(sockfd, ALREADYDISARM, MAX_CMD);
                 }
                 else
                 {
                     isArmed= false;
                     system(DISARM_CMD);
-                    write(sockfd, ACKNOWLEDGE, 12);
+                    write(sockfd, ACKNOWLEDGE, MAX_CMD);
                 }
             }
             else
@@ -215,16 +233,16 @@ void startSocketAndServeCommands()
 
                     if(noAction==1)
                     {
-                        write(sockfd, NOACTIONASKED, 14);
+                        write(sockfd, NOACTIONASKED, MAX_CMD);
                         noAction=0;
                     }
                     else if(switch_num >=15 || strcmp(cmd,"")==0)
                     {
-                        write(sockfd, NOSUCHSWITCH, 13);
+                        write(sockfd, NOSUCHSWITCH, MAX_CMD);
                     }
                     else if(action != 1 && action != 0)
                     {
-                        write(sockfd, INVALIDACTION, 14);
+                        write(sockfd, INVALIDACTION, MAX_CMD);
                     }
                     else if (action == 1 || action == 0 )
                     {
@@ -232,32 +250,32 @@ void startSocketAndServeCommands()
 
                         if(switch_num == -1)
                         {
-                            write(sockfd, NOSUCHSWITCH, 13);
+                            write(sockfd, NOSUCHSWITCH, MAX_CMD);
                         }
                         else if(action == 1)
                         {
-                            write(sockfd, TURNEDON, 9);
+                            write(sockfd, TURNEDON, MAX_CMD);
                         }
                         else
                         {
-                            write(sockfd, TURNEDOFF, 10);
+                            write(sockfd, TURNEDOFF, MAX_CMD);
                         }
 
                     }
                     else
                     {
-                        write(sockfd, RECVFAILEDD, 12);
+                        write(sockfd, RECVFAILEDD, MAX_CMD);
                     }
                 }
                 else
                 {
-                    write(sockfd, SYSARMED, 12);
+                    write(sockfd, SYSARMED, MAX_CMD);
                 }
             }
         }
         else
         {
-            write(sockfd, RECVFAILEDD, 12);
+            write(sockfd, RECVFAILEDD, MAX_CMD);
         }
     }
 }

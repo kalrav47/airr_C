@@ -20,6 +20,8 @@
 #define HEARTBEAT "HEARTBEATCK"
 #define IAMTHERE4U "IAMTHERE4U"
 
+#define DEBUG
+
 // Quit program in case of error
 // @ input : exit message
 void exitFunction(char[]);

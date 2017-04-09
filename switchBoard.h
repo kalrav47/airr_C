@@ -40,6 +40,9 @@
 #define DISARM_CMD "rm .AMRED"
 #define USAGE "USAGE"
 #define COMMAD_MIN_LENGTH 10
+#define MAX_CMD 20
+
+#define DEBUG
 
 // Starts the socket when program runs.
 // After that it starts listen to clients request
