@@ -41,8 +41,10 @@
 #define USAGE "USAGE"
 #define COMMAD_MIN_LENGTH 10
 #define MAX_CMD 20
+#define HEARTBEAT "HEARTBEATCK"
+#define IAMTHERE4U "IAMTHERE4U"
 
-#define DEBUG
+//#define DEBUG
 
 // Starts the socket when program runs.
 // After that it starts listen to clients request
@@ -65,3 +67,6 @@ void loadPreValues();
 // starts reading to touch switches and turns led on/off
 // according to touch event.
 void *gpioRead();
+
+// checks connection to server and kills if server is not there.
+void *heartBeatCheck();

@@ -360,6 +360,92 @@ void loadPreValues()
     }
 }
 
+void *heartBeatCheck()
+{ 
+    int internal_client_socketid = 0;
+    char temp[MAX_CMD];
+    struct sockaddr_in serv_addr;
+    long arg;
+    
+    //wait for 5 seconds before we start
+    sleep(5);
+    
+    while(1)
+    {
+    
+    strcpy(temp,"");
+    
+    // set alarm of 5 seconds
+    alarm (5);
+    
+    // create socket to internal server
+    if((internal_client_socketid = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        incaseOfSignal();
+    }
+#ifdef DEBUG
+        printf("HeartBeatCheck : socket created !\n");
+#endif
+    
+    memset(&serv_addr, '0', sizeof(serv_addr));
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PORT);
+
+    if(inet_pton(AF_INET,IP,&serv_addr.sin_addr)<=0)
+    {
+#ifdef DEBUG
+        printf("HeartBeatCheck : while creating socket\n");
+#endif
+        incaseOfSignal();
+    }
+  
+#ifdef DEBUG
+        printf("HeartBeatCheck : connecting.. !\n");
+#endif
+
+    // connect to internal server
+    if( connect(internal_client_socketid, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    {
+#ifdef DEBUG
+        printf("HeartBeatCheck : while connecting...\n");
+#endif
+        incaseOfSignal();
+    }
+#ifdef DEBUG
+        printf("HeartBeatCheck : sending... !\n");
+#endif   
+  
+    if(send(internal_client_socketid,HEARTBEAT,15,MSG_DONTWAIT) == 11)
+    {
+#ifdef DEBUG
+        printf("HeartBeatCheck : while sending to socket\n");
+#endif
+    	incaseOfSignal();
+    }
+    
+    read(internal_client_socketid,temp,MAX_CMD);
+    
+    if(strcmp(temp,IAMTHERE4U) != 0)
+    {
+#ifdef DEBUG
+        printf("HeartBeatCheck : while receving socket, reply = %s\n",temp);
+#endif
+    	incaseOfSignal();
+    }
+    
+    close(internal_client_socketid);
+    
+    // disable alarm
+    alarm (0);
+    
+#ifdef DEBUG
+        printf("HeartBeatCheck : ping success !\n");
+#endif
+    sleep(5);
+   }
+}
+
 void *gpioRead()
 {
     int j=0,i;
@@ -387,21 +473,25 @@ void *gpioRead()
             }
             fclose(file);
         }
-        sleep (0.5);
+        sleep (2);
     }
 }
 
 int main(int argc, char *argv[])
 {
-    pthread_t gpioReadThread;
+    pthread_t gpioReadThread,heartBeatChecker;
 
     // resgister for the signals
     signal(SIGSEGV, incaseOfSignal);
     signal(SIGINT, incaseOfSignal);
     signal(SIGPIPE, incaseOfSignal);
+    signal(SIGALRM, incaseOfSignal);
 
     // start reading touch switches
     pthread_create(&gpioReadThread, NULL, gpioRead, NULL);
+    
+    // start heartbeat checker
+    pthread_create(&heartBeatChecker, NULL, heartBeatCheck, NULL);
 
     // check if it was armed already
     if( access( ARM_FILE, F_OK ) != -1 )
