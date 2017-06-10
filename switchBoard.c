@@ -16,7 +16,7 @@ int gpio_pins_read[15] = {100 ,102 ,106, 108, 110 ,114, 116, 118, 120 ,123, 34 ,
 
 void startSocketAndServeCommands()
 {
-    int id,sockfd = 0,length,switch_num,cmdLen;
+    int id,sockfd = 0,length,switch_num,cmdLen,j;
     char recvBuff[20],data[25],id_string[11],cmd[10];
     struct sockaddr_in serv_addr;
     const char s[2] = "-";
@@ -118,6 +118,23 @@ void startSocketAndServeCommands()
                 sprintf(data, "%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d",flag[0], flag[1], flag[2], flag[3], flag[4], flag[5], flag[6], flag[7], flag[8],flag[9], flag[10], flag[11], flag[12], flag[13], flag[14]);
                 data[15]='\0';
                 write(sockfd, data,MAX_CMD);
+            }
+            else if(strcmp(cmd,RESETUSAGE) != NULL)
+            {
+            	// reset usage. Simply set all zeros in file
+            	sprintf(data,"echo 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 > %s",USAGE_FILE);
+            	system(data);
+            	write(sockfd, RESETUSAGEDONE, MAX_CMD);
+            }
+            else if(strcmp(cmd,RESETSTAT) != NULL)
+            {
+            	// just delete respective marker files. Else will be taken care by gpioRead function
+            	for (j = 0; j < 15; j++)
+        	{
+        		sprintf(data,"rm /root/.%d",gpio_pins_write[j]);
+       			system(data);
+        	}
+            	write(sockfd, RESETSTATDONE, MAX_CMD);
             }
             else if(strstr(cmd,USAGE) != NULL)
             {
@@ -304,16 +321,16 @@ void gpioWrite(int pin,int value)
 
     if(value==1)
     {
-	// Told to on the led. write to appropriate sys file and save the current time
-        sprintf(writefile,"echo 1 > /sys/class/gpio/gpio%d/value",gpio_pins_write[pin]);
+	// Told to on the led. write to appropriate marker file and save the current time
+        sprintf(writefile,"touch /root/.%d",gpio_pins_write[pin]);
         system(writefile);
         begin[pin] = time(NULL);
     }
     else
     {
-	// Told to off the led. write to appropriate sys file and get the current time
+	// Told to off the led. delete appropriate tmp file and get the current time
 	// differentiate current time with start time and update the usage file.
-        sprintf(writefile,"echo 0 > /sys/class/gpio/gpio%d/value",gpio_pins_write[pin]);
+        sprintf(writefile,"rm /root/.%d",gpio_pins_write[pin]);
         system(writefile);
         end[pin] = time(NULL);
 
@@ -330,33 +347,6 @@ void gpioWrite(int pin,int value)
         f_usage = fopen(USAGE_FILE, "w");
         fprintf(f_usage,"%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",us[0],us[1],us[2],us[3],us[4],us[5],us[6],us[7],us[8],us[9],us[10],us[11],us[12],us[13],us[14]);
         fclose(f_usage);
-    }
-
-    // write to stat file
-    FILE *f_stat=fopen(STAT_FILE,"w");
-    fprintf(f_stat,"%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",flag[0],flag[1],flag[2],flag[3],flag[4],flag[5],flag[6],flag[7],flag[8],flag[9], flag[10], flag[11], flag[12], flag[13], flag[14]);
-    fclose(f_stat);
-}
-
-void loadPreValues()
-{
-    int i=0;
-
-    // read the stat and turn on/off leds accordingly
-    FILE *f_stat=fopen(STAT_FILE,"r");
-    fscanf(f_stat,"%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",&flag[0],&flag[1],&flag[2],&flag[3],&flag[4],&flag[5],&flag[6],&flag[7],&flag[8],&flag[9],&flag[10],&flag[11],&flag[12],&flag[13],&flag[14]);
-    fclose(f_stat);
-
-    for (i = 0; i < 15; i++)
-    {
-        if(flag[i]==1)
-        {
-            gpioWrite(i,1);
-        }
-        else
-        {
-            gpioWrite(i,0);
-        }
     }
 }
 
@@ -449,31 +439,45 @@ void *heartBeatCheck()
 void *gpioRead()
 {
     int j=0,i;
-
+    int us[15]= { 0, };
+    FILE *f_usage;
+    char writefile[128]="";
+    
     while(1)
     {
         for (j = 0; j < 15; j++)
         {
             char readfile[128]="";
             // read file and if there is touch then toggle the switch i.e if it is on then turn it off.
-            sprintf(readfile,"/sys/class/gpio/gpio%d/value",gpio_pins_read[j]);
+            sprintf(readfile,"/root/.%d",gpio_pins_write[j]);
             FILE *file = fopen(readfile,"r");
-            fscanf(file,"%d",&i);
-            if(i==1)
+            if(file)
             {
-                if(flag[j]==1)
-                {
-                    gpioWrite(j,0);
-                }
-                else
-                {
-                    gpioWrite(j,1);
-                }
-                sleep(3);
+            	flag[j]=1;
+            	fclose(file);
             }
-            fclose(file);
+            else
+            {
+            	flag[j]=0;
+            	end[j] = time(NULL);
+
+		f_usage = fopen(USAGE_FILE, "r");
+		fscanf(f_usage, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", &us[0],&us[1], &us[2], &us[3], &us[4], &us[5], &us[6], &us[7], &us[8],&us[9],&us[10], &us[11], &us[12], &us[13], &us[14]);
+		fclose(f_usage);
+
+		if(begin[j] != 0)
+		{
+		    us[j] = us[j] + (end[j] - begin[j]);
+		    begin[j]=0;
+		}
+
+		f_usage = fopen(USAGE_FILE, "w");
+		fprintf(f_usage,"%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",us[0],us[1],us[2],us[3],us[4],us[5],us[6],us[7],us[8],us[9],us[10],us[11],us[12],us[13],us[14]);
+		fclose(f_usage);
+            }
+            
         }
-        sleep (2);
+        sleep (1);
     }
 }
 
@@ -498,9 +502,6 @@ int main(int argc, char *argv[])
     {
         isArmed = true;
     }
-
-    // load the pre values
-    loadPreValues();
 
     // turn on the status led as we are running now.
     gpioWrite(15,1);

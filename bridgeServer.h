@@ -9,7 +9,7 @@
 #include<string.h>
 
 #define MAX 4096
-#define MAX_CMD 20
+#define MAX_CMD 4096
 #define MAXCONN 1000
 #define INTERNAL_SERVER_IP "192.168.0.1"
 #define INTERNAL_SERVER_PORT 5000

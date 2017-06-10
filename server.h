@@ -10,7 +10,7 @@
 #include<signal.h>
 
 // General macros
-#define MAX_CMD 20
+#define MAX_CMD 4096
 #define MAXCONN 1000
 #define SERVER_IP "192.168.0.1"
 #define SERVER_PORT 5000
