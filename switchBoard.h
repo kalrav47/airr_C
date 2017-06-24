@@ -56,7 +56,7 @@
 #define EVENT_SIZE  ( sizeof (struct inotify_event) )
 #define EVENT_BUF_LEN ( 1024 * ( EVENT_SIZE + 16 ) )
 
-#define DEBUG
+//#define DEBUG
 
 // Starts the socket when program runs.
 // After that it starts listen to clients request

@@ -69,8 +69,9 @@ void broadcastToSwitchBoardAndGetReply(char message[],int *csdd)
 
 #ifdef DEBUG
 	    printf("Sent reply to bridge server\n",reply);
-	  	    }
+	  	    
 #endif
+	}
             break;
         }
         else
@@ -91,7 +92,6 @@ void *serveRequest( void *param)
     int *csdd = (int*)param;
     char message[MAX_CMD];
 
-    while(1) {
         if( read(*csdd,message,MAX_CMD) > 0 )
         {
 #ifdef DEBUG
@@ -132,7 +132,7 @@ void *serveRequest( void *param)
                         close(temppp->csd);
                         temppp->csd = *csdd;
                         free(ptr);
-                        break;
+                        
                     }
                     else
                     {
@@ -157,14 +157,14 @@ void *serveRequest( void *param)
                         ptr->next=NULL;
                     }
                 }
-                break;
+                
             }
             else if(strcmp(message,HEARTBEAT)==0)
             {
                 // it have been asked for heartbeat. reply them that server is here.
                 write(*csdd,IAMTHERE4U,11);
                 close(*csdd);
-                break;
+                
             }
             else
             {
@@ -173,10 +173,9 @@ void *serveRequest( void *param)
 		// not interrupt when main comm is going on.
                 broadcastToSwitchBoardAndGetReply(message,csdd);
                 close(*csdd);
-                break;
             }
         }
-    }
+    
 }
 
 void incaseOfSignal()
@@ -207,14 +206,19 @@ int main(void)
 
     // set write timeout of 1 second.
     struct timeval timeout;      
-    timeout.tv_sec = 1;
+    timeout.tv_sec = 3;
     timeout.tv_usec = 0;
     
      if (setsockopt (socket_write, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,sizeof(timeout)) < 0)
      {
      	exitFunction("setsock timeout set failed\n");
      }
-        
+     
+     if (setsockopt (socket_write, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,sizeof(timeout)) < 0)
+     {
+     	exitFunction("setsock timeout set failed\n");
+     }
+       
     int on = 1;
     int ret = setsockopt( socket_write, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on) );
 
