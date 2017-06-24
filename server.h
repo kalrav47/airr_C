@@ -8,6 +8,8 @@
 #include<pthread.h>
 #include<string.h>
 #include<signal.h>
+#include<time.h>
+#include <netinet/tcp.h>
 
 // General macros
 #define MAX_CMD 4096
@@ -19,8 +21,9 @@
 #define ACKNOWLEDGE "ACKNOWLEDGE"
 #define HEARTBEAT "HEARTBEATCK"
 #define IAMTHERE4U "IAMTHERE4U"
+#define SBEXITING "SBEXITING"
 
-//#define DEBUG
+#define DEBUG
 
 // Quit program in case of error
 // @ input : exit message
@@ -37,3 +40,5 @@ void broadcastToSwitchBoardAndGetReply(char[],int *);
 // and taking reply from it.
 // @ input : cliend socket id
 void *serveRequest( void *);
+
+void *connCheck();

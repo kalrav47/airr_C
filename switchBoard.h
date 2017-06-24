@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <fcntl.h>
+//#include <fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include<sys/socket.h>
@@ -12,8 +12,10 @@
 #include<pthread.h>
 #include<time.h>
 #include <stdbool.h>
+#include <linux/inotify.h>
 
 #define PORT 5000
+#define ROOT_DIR "/root"
 #define ID_FILE "/root/id.txt"
 //#define ID_FILE "id"
 #define STAT_FILE "/root/stat.txt"
@@ -47,9 +49,14 @@
 #define RESETSTAT "RESETSTAT"
 #define RESETUSAGEDONE "RESETUSAGEDONE"
 #define RESETSTATDONE "RESETSTATDONE"
+#define SYNC "sync"
+#define SBEXITING "SBEXITING"
 
+// for inotify
+#define EVENT_SIZE  ( sizeof (struct inotify_event) )
+#define EVENT_BUF_LEN ( 1024 * ( EVENT_SIZE + 16 ) )
 
-//#define DEBUG
+#define DEBUG
 
 // Starts the socket when program runs.
 // After that it starts listen to clients request
@@ -75,3 +82,7 @@ void *gpioRead();
 
 // checks connection to server and kills if server is not there.
 void *heartBeatCheck();
+
+
+// Save the usage of each switch
+void saveUsage();

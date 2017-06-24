@@ -11,8 +11,6 @@ struct data {
 } n;
 
 // Global variables
-int socket_write;
-pthread_t threads;
 struct data *root=NULL;
 
 void exitFunction(char message[])
@@ -23,37 +21,55 @@ void exitFunction(char message[])
 
 void broadcastToSwitchBoardAndGetReply(char message[],int *csdd)
 {
-    char reply[MAX_CMD];
-
+    char reply[MAX_CMD]="";
+    ssize_t writtenChars=0;
     struct data *tempp;
     tempp=root;
 
     while(tempp  != NULL)
     {
         // Check specific switchboard according to id
-        // through the linked list that
+        // through the linked list that and make sure it is available.
         if(strstr(message,tempp->id)!= NULL)
         {
+           
 #ifdef DEBUG
 	    printf("Writing '%s' to sb\n",message);
 #endif
-            // Pass command to switch board
-            write(tempp->csd,message, MAX_CMD);
+		    // Pass command to switch board
+		    writtenChars = write(tempp->csd,message, strlen(message)+1);
+            	    if(writtenChars < 0)
+            	    {
+#ifdef DEBUG
+	    printf("writing failed \n");
+#endif
+            	    	write(*csdd,NOSWITCHBOARD,14);
+            	    }
+            	    else
+            	    {
 
 #ifdef DEBUG
 	    printf("Writing Done... waiting for reply\n");
 #endif
-            // get reply from switchboard
-            read(tempp->csd,reply,MAX_CMD);
+			    // get reply from switchboard
+			    writtenChars = read(tempp->csd,reply,MAX_CMD);
 
 #ifdef DEBUG
 	    printf("Got reply '%s' from sb and writing back to bridge server\n",reply);
 #endif
-            // write back to bridge server.
-            write(*csdd,reply,MAX_CMD);
+			    if(writtenChars < 0 || (strcmp(reply,"")==0))
+		    	    {
+		    	    	write(*csdd,NOSWITCHBOARD,14);
+		    	    }
+		    	    else
+		    	    {
+			    // write back to bridge server.
+			    write(*csdd,reply,strlen(reply)+1);
+	            }
 
 #ifdef DEBUG
 	    printf("Sent reply to bridge server\n",reply);
+	  	    }
 #endif
             break;
         }
@@ -65,7 +81,7 @@ void broadcastToSwitchBoardAndGetReply(char message[],int *csdd)
 
     if(tempp == NULL)
     {
-        write(*csdd,NOSWITCHBOARD,MAX_CMD);
+        write(*csdd,NOSWITCHBOARD,14);
     }
 }
 
@@ -85,7 +101,7 @@ void *serveRequest( void *param)
             {
                 // found that new switchboard is connected. We have found
                 // it so acknowledge it.
-                write(*csdd,ACKNOWLEDGE,MAX_CMD);
+                write(*csdd,ACKNOWLEDGE,12);
 #ifdef DEBUG
 	        printf("Ack sent !\n");
 #endif
@@ -95,7 +111,7 @@ void *serveRequest( void *param)
 	        printf("Got id of switchBoard '%s' to server...\n",message);
 #endif
                 // acknowledge that we have got id.
-                write(*csdd,ACKNOWLEDGE,MAX_CMD);
+                write(*csdd,ACKNOWLEDGE,12);
 #ifdef DEBUG
 	        printf("Ack sent again..!\n");
 #endif
@@ -141,22 +157,21 @@ void *serveRequest( void *param)
                         ptr->next=NULL;
                     }
                 }
-
                 break;
             }
             else if(strcmp(message,HEARTBEAT)==0)
             {
                 // it have been asked for heartbeat. reply them that server is here.
-                write(*csdd,IAMTHERE4U,MAX_CMD);
+                write(*csdd,IAMTHERE4U,11);
                 close(*csdd);
                 break;
             }
             else
             {
 		// it is not heartbeat or switchboard, so beliving that it is request from
-		// bridgeserver and pass command to perticular switchboard.
+		// bridgeserver and pass command to perticular switchboard. Also we should
+		// not interrupt when main comm is going on.
                 broadcastToSwitchBoardAndGetReply(message,csdd);
-
                 close(*csdd);
                 break;
             }
@@ -164,14 +179,25 @@ void *serveRequest( void *param)
     }
 }
 
-
-
+void incaseOfSignal()
+{
+	// do nothing basically.
+#ifdef DEBUG
+	        printf("got signal pipe\n");
+#endif	
+}
 int main(void)
 {
 
     int csd;
     struct sockaddr_in saddress;
 
+    int socket_write;
+    pthread_t threads;
+    
+    // grep sigpipe in case client disconnects and we try to write.
+    signal(SIGPIPE, incaseOfSignal);
+    
     // create socket
     socket_write = socket( AF_INET, SOCK_STREAM, 0);
     if( socket_write == -1)
@@ -179,6 +205,16 @@ int main(void)
         exitFunction("Socket init write");
     }
 
+    // set write timeout of 1 second.
+    struct timeval timeout;      
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+    
+     if (setsockopt (socket_write, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,sizeof(timeout)) < 0)
+     {
+     	exitFunction("setsock timeout set failed\n");
+     }
+        
     int on = 1;
     int ret = setsockopt( socket_write, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on) );
 

@@ -70,15 +70,15 @@ bool buildJSONForReported(char *pJsonDocument, size_t maxSizeOfJsonDocument, cha
 
 void clearDelta()
 {
-	updateShadowStat("","");
+	updateShadowStat("","","");
 }
 
-void updateShadowStat(char lastCmd[],char lastReply[])
+void updateShadowStat(char lastCmd[],char lastReply[],char lastCmdCache[])
 {
 	IoT_Error_t rc = NONE_ERROR;
 	char tmp[100];
 	
-	sprintf(tmp,"{\"lastCommand\":\"%s\",\"lastReply\":\"%s\"}",lastCmd,lastReply);
+	sprintf(tmp,"{\"lastCommand\":\"%s\",\"lastReply\":\"%s#%s\"}",lastCmd,lastCmdCache,lastReply);
 	
 	if (buildJSONForReported(lastCommand, SHADOW_MAX_SIZE_OF_RX_BUFFER, tmp)) {
 		rc = aws_iot_shadow_update(&mqttClient, AWS_IOT_MY_THING_NAME, lastCommand, UpdateStatusCallback, NULL, 2, true);
@@ -227,16 +227,16 @@ void askServer(char command[])
     }
     
     // pass it on to internal server
-    write(internal_client_socketid,command,20);
+    write(internal_client_socketid,command,strlen(command)+1);
 
     // get reply from internal server
-    read(internal_client_socketid,reply,20);
+    read(internal_client_socketid,reply,4096);
     
     close(internal_client_socketid);
     
     // disable alarm
     alarm (0);
-    updateShadowStat("",reply);
+    updateShadowStat("",reply,command);
     
 }
 
