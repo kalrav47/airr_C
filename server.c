@@ -1,5 +1,6 @@
 //gcc server.c -o server -lpthread
 
+
 //General header files
 #include<sys/types.h>
 #include<sys/socket.h>
